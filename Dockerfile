@@ -1,7 +1,6 @@
-FROM ubuntu
+FROM ubuntu:14.04
  
 RUN apt-get update
-
 
 #Runit
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y runit 
@@ -10,9 +9,11 @@ CMD /usr/sbin/runsvdir-start
 #SSHD
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y openssh-server &&	mkdir -p /var/run/sshd && \
     echo 'root:root' |chpasswd
+RUN sed -i "s/session.*required.*pam_loginuid.so/#session    required     pam_loginuid.so/" /etc/pam.d/sshd
+RUN sed -i "s/PermitRootLogin without-password/#PermitRootLogin without-password/" /etc/ssh/sshd_config
 
 #Utilities
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y vim less net-tools inetutils-ping curl git telnet nmap socat dnsutils netcat tree htop unzip sudo
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y vim less net-tools inetutils-ping curl git telnet nmap socat dnsutils netcat tree htop unzip sudo software-properties-common
 
 #nginx
 RUN echo 'deb http://nginx.org/packages/ubuntu/ precise nginx' > /etc/apt/sources.list.d/nginx.list && \
@@ -21,7 +22,8 @@ RUN echo 'deb http://nginx.org/packages/ubuntu/ precise nginx' > /etc/apt/source
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y nginx 
 
 #grafana
-RUN curl -L https://github.com/torkelo/grafana/archive/v1.5.3.tar.gz | tar xz
+RUN curl -L http://grafanarel.s3.amazonaws.com/grafana-1.6.1.tar.gz | tar xz
+RUN mv grafana* grafana
 
 #influxdb
 RUN wget http://s3.amazonaws.com/influxdb/influxdb_latest_amd64.deb && \
@@ -33,16 +35,16 @@ RUN wget https://github.com/novaquark/sysinfo_influxdb/releases/download/0.2.0/s
     chmod +x sysinfo_influxdb
 
 #Configuration
-ADD . /docker
 
 #nginx conf
-RUN rm /etc/nginx/conf.d/default.conf && ln -s /docker/nginx.conf /etc/nginx/conf.d/grafana.conf
+RUN mv /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf.saved
+ADD nginx.conf /etc/nginx/conf.d/grafana.conf
 
 #grafana conf
-RUN ln -s /docker/config.js /grafana-1.5.3/src/config.js
+ADD config.js /grafana/src/config.js
 
-#Runit Automatically setup all services in the sv directory
-RUN for dir in /docker/sv/*; do echo $dir; chmod +x $dir/run $dir/log/run; ln -s $dir /etc/service/; done
+#Add runit services
+ADD sv /etc/service 
 
 RUN runsv /etc/service/influxdb& \
     while ! nc -vz localhost 8086;do sleep 1; done && \
@@ -51,7 +53,3 @@ RUN runsv /etc/service/influxdb& \
 
 #hack to avoid influxdb crash
 RUN rm -rf /opt/influxdb/shared/data/raft
-
-ENV HOME /root
-WORKDIR /root
-EXPOSE 22
