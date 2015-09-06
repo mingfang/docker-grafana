@@ -1,8 +1,0 @@
-#!/bin/sh
-
-sv start influxdb || exit 1
-while ! nc -vz localhost 8086;do sleep 1; done 
-curl -X POST 'http://localhost:8086/db?u=root&p=root' -d '{"name": "sysinfo"}'
-
-exec 2>&1
-exec /sysinfo_influxdb -h localhost:8086 -u root -p root -d sysinfo -P "" -i 10s -D -v=json
