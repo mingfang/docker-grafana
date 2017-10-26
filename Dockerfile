@@ -17,7 +17,7 @@ CMD bash -c 'export > /etc/envvars && /usr/sbin/runsvdir-start'
 RUN apt-get install -y --no-install-recommends vim less net-tools inetutils-ping wget curl git telnet nmap socat dnsutils netcat tree htop unzip sudo software-properties-common jq psmisc iproute python ssh rsync gettext-base
 
 #Grafana
-RUN wget -O - https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana-4.5.2.linux-x64.tar.gz | tar zx
+RUN wget -O - https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana-4.6.0.linux-x64.tar.gz | tar zx
 RUN mv grafana* grafana
 
 # Add runit services
